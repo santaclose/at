@@ -6,6 +6,13 @@
 #include <algorithm>
 using namespace std;
 
+struct node
+{
+  string text;
+  node* parent;
+  vector<node*> children;
+};
+
 struct tree
 {
     int nodeCount;
@@ -38,6 +45,52 @@ bool stringContainsSubstr(string str, string substr)
     }
   }
   return false;
+}
+
+string getNodeText(string fileContents, int start)
+{
+  int end = start;
+  while (fileContents.at(end) != '\n' && fileContents.at(end) != ']' && fileContents.at(end) != '[')
+  {
+    end++;
+  }
+  return fileContents.substr(start, end - start);
+}
+
+static node getRoot(string filePath)
+{
+  ifstream ifs (filePath, ifstream::in);
+  string fileContents((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+
+  node* root;
+
+  vector<node*> parentStack;
+
+  int currentLevel = 0;
+  for (int i = 0; i < fileContents.length(); i++)
+  {
+    if (stringMatchesString(fileContents, "[", i))
+    {
+      node newNode;
+      newNode.text = getNodeText(fileContents, i + 1);
+      if (currentLevel > 0) // is not root
+      {
+        newNode.parent = parentStack.back();
+        parentStack.back()->children.push_back(&newNode);
+      }
+      else
+      {
+        root = &newNode;
+      }
+      parentStack.push_back(&newNode);
+      currentLevel++;
+    }
+    else if (stringMatchesString(fileContents, "]", i))
+    {
+      currentLevel--;
+      parentStack.pop_back();
+    }
+  }
 }
 
 static tree getTree(string filePath)
@@ -118,7 +171,7 @@ static tree getTree(string filePath)
       {
         if (curHeight > 0)
         {
-          
+
         }
         curHeight++;
       }

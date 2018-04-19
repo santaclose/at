@@ -57,13 +57,12 @@ string getNodeText(string fileContents, int start)
   return fileContents.substr(start, end - start);
 }
 
-static node getRoot(string filePath)
+static vector<node> buildTree(string filePath)
 {
   ifstream ifs (filePath, ifstream::in);
   string fileContents((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 
-  node* root;
-
+  vector<node> roots;
   vector<node*> parentStack;
 
   int currentLevel = 0;
@@ -80,7 +79,7 @@ static node getRoot(string filePath)
       }
       else
       {
-        root = &newNode;
+        roots.push_back(newNode);
       }
       parentStack.push_back(&newNode);
       currentLevel++;
@@ -91,6 +90,8 @@ static node getRoot(string filePath)
       parentStack.pop_back();
     }
   }
+
+  return roots;
 }
 
 static tree getTree(string filePath)
@@ -184,6 +185,10 @@ static tree getTree(string filePath)
 
 int main (int argc, char** argv)
 {
-  tree fileTree = getTree("sample.tree");
+  vector<node> tree = buildTree("sample.tree");
+  for (auto& a : tree)
+  {
+    cout << a.text;
+  }
   return 0;
 }

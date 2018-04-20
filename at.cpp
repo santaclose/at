@@ -11,6 +11,7 @@ struct node
   string text;
   node* parent;
   vector<node*> children;
+  int depth;
   float position;
 };
 
@@ -64,6 +65,7 @@ vector<node*> buildTree(string filePath)
       node* newNode = new node;
       //node newNode;
       newNode->text = getNodeTextFromFile(fileContents, i + 1);
+      newNode->depth = currentLevel;
       if (currentLevel > 0) // is not root
       {
         newNode->parent = parentStack.back(); // get last parent
@@ -109,56 +111,73 @@ float basicChildOffset(int childrenCount, int childIndex)
   return childIndex - ((float) childrenCount / 2 - 0.5);
 }
 
-void calculatePositions(node*& someNode)//, int childIndex)
+int getMaxDepth(node* someNode)
 {
-  if (someNode->parent == NULL) // is root
-  {
-    someNode->position = 0;
-  }
-
-  if (someNode->children.size() >= 2)
-  {
-    int cursorA = someNode->children.size()/2;
-    int cursorB = cursorA + 1;
-
-    float displacementA = 0;
-    float displacementB;
-    bool firstIteration = true;
-
-    while (cursorA >= 0)
-    {
-      float halfClusterSize = (float)clusterSize(someNode->children[cursorA])/2;
-      displacementA += halfClusterSize;
-      if (firstIteration) // saving offset for the right side in first iteration
-      {
-        displacementB = halfClusterSize;
-        //cout << "middle halfClusterSize: " << halfClusterSize << endl;
-        firstIteration = false;
-      }
-      someNode->children[cursorA]->position = /*basicChildOffset(someNode->children.size(), cursorA) + */someNode->position - displacementA;
-      cursorA--;
-    }
-    while (cursorB < someNode->children.size())
-    {
-      someNode->children[cursorB]->position = /*basicChildOffset(someNode->children.size(), cursorB) + */someNode->position + displacementB;
-      float halfClusterSize = (float)clusterSize(someNode->children[cursorB])/2;
-      displacementB += halfClusterSize;
-      cursorB++;
-    }
-  }
-  else if (someNode->children.size() == 1) // has one child
-  {
-    someNode->children[0]->position = someNode->position;
-  }
-  //else
-  //{
-    //someNode->position = basicChildOffset(someNode->parent->children.size(), childIndex) * ((float)clusterSize(someNode)/2);
-  //}
-  //int index = 0;
+  int maxDepth = someNode->depth;
   for (auto a : someNode->children)
   {
-    calculatePositions(a);//, index);
-    //index++;
+    int childMaxDepth = getMaxDepth(a);
+    if (childMaxDepth > maxDepth)
+    {
+      maxDepth = childMaxDepth;
+    }
+  }
+  return maxDepth;
+}
+
+void calculateLeafPositions(node*& someNode, int depth, int& counter)
+{
+  if (someNode->depth == depth)
+  {
+    someNode->position = counter;
+    counter++;
+  }
+  for (auto a : someNode->children)
+  {
+    calculateLeafPositions(a, depth, counter);
+  }
+}
+
+float getChildPosAverage(node*& someNode)
+{
+  float result = 0;
+  for (auto a : someNode->children)
+  {
+    result += a->position;
+  }
+  result /= (float) someNode->children.size();
+}
+
+void calculatePositionsForLevel(node*& someNode, int level, int& counter)
+{
+  if (someNode->depth == level)
+  {
+    if (someNode->children.size() > 0)
+    {
+      someNode->position = getChildPosAverage(someNode);
+    }
+    else
+    {
+      someNode->position = counter;
+      counter++;
+    }
+  }
+  for (auto a : someNode->children)
+  {
+    calculatePositionsForLevel(a, level, counter);
+  }
+}
+
+void calculatePositions(node*& someNode)//, int childIndex)
+{
+  int maxDepth = getMaxDepth(someNode);
+  int counter = 0;
+  calculateLeafPositions(someNode, maxDepth, counter);
+  int curDepth = maxDepth - 1;
+  while (curDepth >= 0)
+  {
+    calculatePositionsForLevel(someNode, curDepth, counter);
+    curDepth--;
   }
 }
 
@@ -176,14 +195,42 @@ void printTree(node* root, int level)
   }
 }
 
+
+void writeSVGhelper(node* someNode, ofstream& outputFile)
+{
+  outputFile << "<ellipse cx=\"" << someNode->position*60 + 100 << "\" cy=\"" << someNode->depth*60 + 100 << "\" rx=\".5\" ry=\".5\" stroke=\"black\" fill=\"none\" stroke-width=\"5\" />\n";
+  for (auto a : someNode->children)
+  {
+    writeSVGhelper(a, outputFile);
+  }
+}
+void writeSVG(node* root, string output, float width, float height)
+{
+
+//<svg width="400" height="400">
+//<ellipse cx="20" cy="20" rx=".5" ry=".5" stroke="black" fill="none" stroke-width="5" />
+//</svg>
+
+  ofstream outputFile;
+  outputFile.open ("output.svg");
+  outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\">\n";
+
+  writeSVGhelper(root, outputFile);
+
+  outputFile << "</svg>";
+  outputFile.close();
+}
+
 int main (int argc, char** argv)
 {
   vector<node*> roots = buildTree("sample.tree");
 
   calculatePositions(roots[0]);
 
-  printTree(roots[0], 0);
+  //printTree(roots[0], 0);
   //cout << (float)clusterSize(roots[0]->children[1])/2;
+
+  writeSVG(roots[0], "output.svg", 800, 500);
 
   return 0;
 }

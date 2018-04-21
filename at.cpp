@@ -49,12 +49,19 @@ string getNodeTextFromFile(string fileContents, int start)
   return fileContents.substr(start, end - start);
 }
 
-vector<node*> buildTree(string filePath)
+vector<node*> buildTree(string filePath, bool& fileNotFound)
 {
+  vector<node*> roots;
+
   ifstream ifs (filePath, ifstream::in);
+  if (ifs.fail())
+  {
+    fileNotFound = true;
+    return roots;
+  }
+
   string fileContents((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 
-  vector<node*> roots;
   vector<node*> parentStack;
 
   int currentLevel = 0;
@@ -124,6 +131,19 @@ int getMaxDepth(node* someNode)
   }
   return maxDepth;
 }
+int getMaxDepth(vector<node*>& roots)
+{
+  int maxDepth = 0;
+  for (auto a : roots)
+  {
+    int cur = getMaxDepth(a);
+    if (cur > maxDepth)
+    {
+      maxDepth = cur;
+    }
+  }
+  return maxDepth;
+}
 
 void initializeLeafPositions(node*& someNode, int& counter)
 {
@@ -169,6 +189,29 @@ void calculatePositionsForLevel(node*& someNode, int level)
   }
 }
 
+void fixPositions(node*& someNode, float xSep, float ySep, float xMargin, float yMargin)
+{
+  someNode->position = someNode->position * xSep + xMargin;
+  someNode->depth = someNode->depth * ySep + yMargin;
+
+  for (auto a : someNode->children)
+  {
+    fixPositions(a, xSep, ySep, xMargin, yMargin);
+  }
+}
+
+float getMaxPosition(node*& root)
+{
+  if (root->children.size() > 0)
+  {
+    return getMaxPosition(root->children[root->children.size() - 1]);
+  }
+  else
+  {
+    return root->position;
+  }
+}
+
 void calculatePositions(node*& someNode)//, int childIndex)
 {
   int maxDepth = getMaxDepth(someNode);
@@ -179,6 +222,16 @@ void calculatePositions(node*& someNode)//, int childIndex)
   {
     calculatePositionsForLevel(someNode, curDepth);
     curDepth--;
+  }
+}
+void calculatePositions(vector<node*>& roots)
+{
+  float curOffset = 0;
+  for (auto a : roots)
+  {
+    calculatePositions(a);
+    fixPositions(a, 1, 1, curOffset, 0);
+    curOffset = getMaxPosition(a) + 1;
   }
 }
 
@@ -196,29 +249,6 @@ void printTree(node* root, int level)
   }
 }
 
-void fixPositions(node*& someNode, float xSep, float ySep, float margin)
-{
-  someNode->position = someNode->position * xSep + margin;
-  someNode->depth = someNode->depth * ySep + margin;
-
-  for (auto a : someNode->children)
-  {
-    fixPositions(a, xSep, ySep, margin);
-  }
-}
-
-float getMaxPosition(node*& root)
-{
-  if (root->children.size() > 0)
-  {
-    return getMaxPosition(root->children[root->children.size() - 1]);
-  }
-  else
-  {
-    return root->position;
-  }
-}
-
 void writeSVGhelper(node* someNode, ofstream& outputFile, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
 {
   // <path d="M50,300 C50,230 300,270 300,200" stroke="black" fill="none" stroke-width="5" />
@@ -230,7 +260,7 @@ void writeSVGhelper(node* someNode, ofstream& outputFile, float nodeRadius, floa
   }
 }
 
-void writeSVG(node* root, string output, float width, float height, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
+void writeSVG(vector<node*>& roots, string output, float width, float height, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
 {
   // <svg width="400" height="400">
   // <ellipse cx="20" cy="20" rx=".5" ry=".5" stroke="black" fill="none" stroke-width="5" />
@@ -240,7 +270,10 @@ void writeSVG(node* root, string output, float width, float height, float nodeRa
   outputFile.open ("output.svg");
   outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink= \"http://www.w3.org/1999/xlink\">\n";
 
-  writeSVGhelper(root, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
+  for (auto a : roots)
+  {
+    writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
+  }
 
   outputFile << "</svg>";
   outputFile.close();
@@ -248,21 +281,76 @@ void writeSVG(node* root, string output, float width, float height, float nodeRa
 
 int main (int argc, char** argv)
 {
-  vector<node*> roots = buildTree("sample.tree");
+  if (argc == 1)
+  {
+    cout << "usage:\n    at path" << endl;
+    cout << "    at path [options]" << endl;
+    cout << "options:\n[m] margin\n[x] xSep\n[y] ySep\n[n] nodeRadius\n[b] bottomHandlerOffset\n[t] topHandlerOffset\n";
+    return 0;
+  }
+  else
+  {
+    float margin = 50;
+    float xSep = 40;
+    float ySep = 60;
+    float nodeRadius = 5;
+    float bottomHandlerOffset = 15;
+    float topHandlerOffset = 30;
 
-  float margin = 50;
-  calculatePositions(roots[0]);
-  fixPositions(roots[0], 35, 50, margin);
+    if (argc % 2 == 1)
+    {
+      cout << "invalid arguments\n";
+    }
+    int i = 2;
+    while (i < argc)
+    {
+      if (argv[i][0] == 'm')
+      {
+        margin = atof(argv[i + 1]);
+      }
+      else if (argv[i][0] == 'x')
+      {
+        xSep = atof(argv[i + 1]);
+      }
+      else if (argv[i][0] == 'y')
+      {
+        ySep = atof(argv[i + 1]);
+      }
+      else if (argv[i][0] == 'n')
+      {
+        nodeRadius = atof(argv[i + 1]);
+      }
+      else if (argv[i][0] == 'b')
+      {
+        bottomHandlerOffset = atof(argv[i + 1]);
+      }
+      else if (argv[i][0] == 't')
+      {
+        topHandlerOffset = atof(argv[i + 1]);
+      }
+      i += 2;
+    }
 
-  float canvas[2];
-  canvas[0] = getMaxPosition(roots[0]) + margin;
-  canvas[1] = getMaxDepth(roots[0]) + margin;
+    bool fileNotFound = false;
+    vector<node*> roots = buildTree(argv[1], fileNotFound);
+    if (fileNotFound)
+    {
+      cout << "file not found\n";
+      return -1;
+    }
 
-  //cout << canvas[0] << ", " << canvas[1] << endl;
-  //printTree(roots[0], 0);
-  //cout << (float)clusterSize(roots[0]->children[1])/2;
+    calculatePositions(roots);
+    for (auto a : roots)
+    {
+      fixPositions(a, xSep, ySep, margin, margin);
+    }
 
-  writeSVG(roots[0], "output.svg", canvas[0], canvas[1], 10, 15, 15);
+    float canvas[2];
+    canvas[0] = getMaxPosition(roots[roots.size()-1]) + margin;
+    canvas[1] = getMaxDepth(roots) + margin;
 
-  return 0;
+    writeSVG(roots, "output.svg", canvas[0], canvas[1], nodeRadius, topHandlerOffset, bottomHandlerOffset);
+
+    return 0;
+  }
 }

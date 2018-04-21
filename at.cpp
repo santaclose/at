@@ -188,7 +188,7 @@ void printTree(node* root, int level)
   {
     cout << "  ";
   }
-  cout << root->text << ": " << root->position << endl;
+  cout << root->text << ": " << root->position << ", " << root->depth << endl;
 
   for (auto a : root->children)
   {
@@ -196,14 +196,26 @@ void printTree(node* root, int level)
   }
 }
 
-void getSVGPositions(node*& someNode, float xSep, float ySep, float margin)
+void fixPositions(node*& someNode, float xSep, float ySep, float margin)
 {
   someNode->position = someNode->position * xSep + margin;
   someNode->depth = someNode->depth * ySep + margin;
 
   for (auto a : someNode->children)
   {
-    getSVGPositions(a, xSep, ySep, margin);
+    fixPositions(a, xSep, ySep, margin);
+  }
+}
+
+float getMaxPosition(node*& root)
+{
+  if (root->children.size() > 0)
+  {
+    return getMaxPosition(root->children[root->children.size() - 1]);
+  }
+  else
+  {
+    return root->position;
   }
 }
 
@@ -226,7 +238,7 @@ void writeSVG(node* root, string output, float width, float height, float nodeRa
 
   ofstream outputFile;
   outputFile.open ("output.svg");
-  outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\">\n";
+  outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink= \"http://www.w3.org/1999/xlink\">\n";
 
   writeSVGhelper(root, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
 
@@ -238,13 +250,19 @@ int main (int argc, char** argv)
 {
   vector<node*> roots = buildTree("sample.tree");
 
+  float margin = 50;
   calculatePositions(roots[0]);
-  getSVGPositions(roots[0], 35, 50, 70);
+  fixPositions(roots[0], 35, 50, margin);
 
-  printTree(roots[0], 0);
+  float canvas[2];
+  canvas[0] = getMaxPosition(roots[0]) + margin;
+  canvas[1] = getMaxDepth(roots[0]) + margin;
+
+  //cout << canvas[0] << ", " << canvas[1] << endl;
+  //printTree(roots[0], 0);
   //cout << (float)clusterSize(roots[0]->children[1])/2;
 
-  writeSVG(roots[0], "output.svg", 800, 500, 10, 15, 15);
+  writeSVG(roots[0], "output.svg", canvas[0], canvas[1], 10, 15, 15);
 
   return 0;
 }

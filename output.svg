@@ -1,4 +1,13 @@
 <svg width="620" height="200" xmlns="http://www.w3.org/2000/svg" xmlns:xlink= "http://www.w3.org/1999/xlink">
+<defs>
+    <style type="text/css">
+        @font-face
+        {
+	        font-family: 'tw';
+	        src: url('cmunbtl.ttf');
+        }
+    </style>
+</defs>
 <ellipse cx="288.182" cy="50" rx="10" ry="10" stroke="black" fill="none" stroke-width="1" />
 <path d="M50,90 C50,70 288.182,80 288.182,60" stroke="black" fill="none" stroke-width="1" />
 <ellipse cx="50" cy="100" rx="10" ry="10" stroke="black" fill="none" stroke-width="1" />
@@ -30,4 +39,7 @@
 <ellipse cx="530" cy="100" rx="10" ry="10" stroke="black" fill="none" stroke-width="1" />
 <path d="M570,90 C570,70 288.182,80 288.182,60" stroke="black" fill="none" stroke-width="1" />
 <ellipse cx="570" cy="100" rx="10" ry="10" stroke="black" fill="none" stroke-width="1" />
+<text x="570" y="101" text-anchor="middle" font-family="tw" font-size="4">
+    SF Font 
+</text>
 </svg>

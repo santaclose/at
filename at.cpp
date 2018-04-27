@@ -95,29 +95,6 @@ vector<node*> buildTree(string filePath, bool& fileNotFound)
   return roots;
 }
 
-int clusterSize(node* root) // x axis size
-{
-  if (root->children.size() == 0)
-  {
-    return 1;
-  }
-  else
-  {
-    int res = 0;
-    for (auto a : root->children)
-    {
-      res += clusterSize(a);
-    }
-    return res;
-  }
-}
-
-
-float basicChildOffset(int childrenCount, int childIndex)
-{
-  return childIndex - ((float) childrenCount / 2 - 0.5);
-}
-
 int getMaxDepth(node* someNode)
 {
   int maxDepth = someNode->depth;
@@ -131,6 +108,7 @@ int getMaxDepth(node* someNode)
   }
   return maxDepth;
 }
+
 int getMaxDepth(vector<node*>& roots)
 {
   int maxDepth = 0;
@@ -177,11 +155,6 @@ void calculatePositionsForLevel(node*& someNode, int level)
     {
       someNode->position = getChildPosAverage(someNode);
     }
-    //else
-    //{
-    //  someNode->position = counter;
-    //  counter++;
-    //}
   }
   for (auto a : someNode->children)
   {
@@ -224,6 +197,7 @@ void calculatePositions(node*& someNode)//, int childIndex)
     curDepth--;
   }
 }
+
 void calculatePositions(vector<node*>& roots)
 {
   float curOffset = 0;

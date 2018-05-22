@@ -39,14 +39,27 @@ bool stringContainsSubstr(string str, string substr)
   return false;
 }
 
-string getNodeTextFromFile(string fileContents, int start)
+string getNodeTextFromFile(string fileContents, int start, int& i)
 {
-  int end = start;
+	string res = "";
+	while (fileContents.at(start) != '[' && fileContents.at(start) != ']' && fileContents.at(start) != '\n')
+	{
+		if (fileContents.at(start) == '\\')
+		{
+			start++;
+		}
+		res += fileContents.at(start);
+		start++;
+	}
+	i = start - 1;
+	return res;
+
+  /*int end = start;
   while (fileContents.at(end) != '\n' && fileContents.at(end) != ']' && fileContents.at(end) != '[')
   {
     end++;
   }
-  return fileContents.substr(start, end - start);
+  return fileContents.substr(start, end - start);*/
 }
 
 vector<node*> buildTree(string filePath, bool& fileNotFound)
@@ -71,7 +84,7 @@ vector<node*> buildTree(string filePath, bool& fileNotFound)
     {
       node* newNode = new node;
       //node newNode;
-      newNode->text = getNodeTextFromFile(fileContents, i + 1);
+      newNode->text = getNodeTextFromFile(fileContents, i + 1, i);
       newNode->depth = currentLevel;
       if (currentLevel > 0) // is not root
       {
@@ -95,6 +108,29 @@ vector<node*> buildTree(string filePath, bool& fileNotFound)
   return roots;
 }
 
+int clusterSize(node* root) // x axis size
+{
+  if (root->children.size() == 0)
+  {
+    return 1;
+  }
+  else
+  {
+    int res = 0;
+    for (auto a : root->children)
+    {
+      res += clusterSize(a);
+    }
+    return res;
+  }
+}
+
+
+float basicChildOffset(int childrenCount, int childIndex)
+{
+  return childIndex - ((float) childrenCount / 2 - 0.5);
+}
+
 int getMaxDepth(node* someNode)
 {
   int maxDepth = someNode->depth;
@@ -108,7 +144,6 @@ int getMaxDepth(node* someNode)
   }
   return maxDepth;
 }
-
 int getMaxDepth(vector<node*>& roots)
 {
   int maxDepth = 0;
@@ -155,6 +190,11 @@ void calculatePositionsForLevel(node*& someNode, int level)
     {
       someNode->position = getChildPosAverage(someNode);
     }
+    //else
+    //{
+    //  someNode->position = counter;
+    //  counter++;
+    //}
   }
   for (auto a : someNode->children)
   {
@@ -197,7 +237,6 @@ void calculatePositions(node*& someNode)//, int childIndex)
     curDepth--;
   }
 }
-
 void calculatePositions(vector<node*>& roots)
 {
   float curOffset = 0;
@@ -223,14 +262,19 @@ void printTree(node* root, int level)
   }
 }
 
-void writeSVGhelper(node* someNode, ofstream& outputFile, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
+void writeSVGhelper(node* someNode, ofstream& outputFile, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset, int& nodeID)
 {
   // <path d="M50,300 C50,230 300,270 300,200" stroke="black" fill="none" stroke-width="5" />
-  outputFile << "<ellipse cx=\"" << someNode->position << "\" cy=\"" << someNode->depth << "\" rx=\"" << nodeRadius << "\" ry=\"" << nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\" />\n";
+  // <text x="34" y="43" fill="white" stroke="balck" stroke-width="2" text-anchor="middle" font-size="24">5</text>
+  outputFile << "<ellipse cx=\"" << someNode->position << "\" cy=\"" << someNode->depth << "\" rx=\"" << nodeRadius << "\" ry=\"" << nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"3\" />\n";
+  outputFile << "<text x=\"" << someNode->position << "\" y=\"" << someNode->depth + 3 << "\" fill=\"black\" stroke=\"balck\" stroke-width=\"2\" text-anchor=\"middle\" font-size=\"6\">" << someNode->text << "</text>\n";
+  outputFile << "<text x=\"" << someNode->position << "\" y=\"" << someNode->depth + 15 << "\" fill=\"black\" stroke=\"balck\" stroke-width=\"2\" text-anchor=\"middle\" font-size=\"6\">" << nodeID << "</text>\n";
+  nodeID++;
+
   for (auto a : someNode->children)
   {
     outputFile << "<path d=\"M" << a->position << ',' << a->depth - nodeRadius << " C" << a->position << ',' << a->depth - nodeRadius - bottomHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius + topHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\" />\n";
-    writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
+    writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset, nodeID);
   }
 }
 
@@ -244,9 +288,11 @@ void writeSVG(vector<node*>& roots, string output, float width, float height, fl
   outputFile.open ("output.svg");
   outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink= \"http://www.w3.org/1999/xlink\">\n";
 
+  int nodeID = 1;
+
   for (auto a : roots)
   {
-    writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
+    writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset, nodeID);
   }
 
   outputFile << "</svg>";
@@ -322,6 +368,8 @@ int main (int argc, char** argv)
     float canvas[2];
     canvas[0] = getMaxPosition(roots[roots.size()-1]) + margin;
     canvas[1] = getMaxDepth(roots) + margin;
+
+    printTree(roots[0], 0);
 
     writeSVG(roots, "output.svg", canvas[0], canvas[1], nodeRadius, topHandlerOffset, bottomHandlerOffset);
 

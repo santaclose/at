@@ -46,10 +46,12 @@ string getNodeTextFromFile(string fileContents, int start)
 	{
 		end++;
 	}
-	return fileContents.substr(start, end - start);
+	string text = fileContents.substr(start, end - start);
+	cout << "node text: " << text << endl;
+	return text;
 }
 
-vector<node*> buildTree(string filePath, bool& fileNotFound)
+vector<node*> buildTree(const string& filePath, bool& fileNotFound)
 {
 	vector<node*> roots;
 
@@ -98,7 +100,7 @@ vector<node*> buildTree(string filePath, bool& fileNotFound)
 int getMaxDepth(node* someNode)
 {
 	int maxDepth = someNode->depth;
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
 		int childMaxDepth = getMaxDepth(a);
 		if (childMaxDepth > maxDepth)
@@ -112,7 +114,7 @@ int getMaxDepth(node* someNode)
 int getMaxDepth(vector<node*>& roots)
 {
 	int maxDepth = 0;
-	for (auto a : roots)
+	for (node* a : roots)
 	{
 		int cur = getMaxDepth(a);
 		if (cur > maxDepth)
@@ -130,7 +132,7 @@ void initializeLeafPositions(node*& someNode, int& counter)
 		someNode->position = counter;
 		counter++;
 	}
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
 		initializeLeafPositions(a, counter);
 	}
@@ -139,7 +141,7 @@ void initializeLeafPositions(node*& someNode, int& counter)
 float getChildPosAverage(node*& someNode)
 {
 	float result = 0;
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
 		result += a->position;
 	}
@@ -156,7 +158,7 @@ void calculatePositionsForLevel(node*& someNode, int level)
 			someNode->position = getChildPosAverage(someNode);
 		}
 	}
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
 		calculatePositionsForLevel(a, level);
 	}
@@ -167,7 +169,7 @@ void fixPositions(node*& someNode, float xSep, float ySep, float xMargin, float 
 	someNode->position = someNode->position * xSep + xMargin;
 	someNode->depth = someNode->depth * ySep + yMargin;
 
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
 		fixPositions(a, xSep, ySep, xMargin, yMargin);
 	}
@@ -201,7 +203,7 @@ void calculatePositions(node*& someNode)//, int childIndex)
 void calculatePositions(vector<node*>& roots)
 {
 	float curOffset = 0;
-	for (auto a : roots)
+	for (node* a : roots)
 	{
 		calculatePositions(a);
 		fixPositions(a, 1, 1, curOffset, 0);
@@ -217,34 +219,48 @@ void printTree(node* root, int level)
 	}
 	cout << root->text << ": " << root->position << ", " << root->depth << endl;
 
-	for (auto a : root->children)
+	for (node* a : root->children)
 	{
 		printTree(a, level + 1);
 	}
 }
 
-void writeSVGhelper(node* someNode, ofstream& outputFile, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
+void writeSVGhelper(const node* someNode, ofstream& outputFile, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
 {
 	// <path d="M50,300 C50,230 300,270 300,200" stroke="black" fill="none" stroke-width="5" />
+	
+	outputFile << "<text xmlns=\"http://www.w3.org/2000/svg\" x=\"";
+	outputFile << someNode->position;
+	outputFile << "\" y=\"";
+	outputFile << someNode->depth;
+	outputFile << "\" text-anchor=\"middle\" stroke=\"000000\" stroke-width=\"0px\" dy=\".3em\" font-size=\"8\">";
+	outputFile << someNode->text;
+	outputFile << "</text>";
 	outputFile << "<ellipse cx=\"" << someNode->position << "\" cy=\"" << someNode->depth << "\" rx=\"" << nodeRadius << "\" ry=\"" << nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\" />\n";
-	for (auto a : someNode->children)
+	for (node* a : someNode->children)
 	{
-		outputFile << "<path d=\"M" << a->position << ',' << a->depth - nodeRadius << " C" << a->position << ',' << a->depth - nodeRadius - bottomHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius + topHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\" />\n";
+		//outputFile << "<path d=\"M" << a->position << ',' << a->depth - nodeRadius << " C" << a->position << ',' << a->depth - nodeRadius - bottomHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius + topHandlerOffset << ' ' << someNode->position << ',' << someNode->depth + nodeRadius << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\" />\n";
+
+		outputFile << "<line x1=\"" << someNode->position;
+		outputFile << "\" y1=\"" << someNode->depth + nodeRadius;
+		outputFile << "\" x2=\"" << a->position;
+		outputFile << "\" y2=\"" << a->depth - nodeRadius;
+		outputFile << "\" style=\"stroke:rgb(0,0,0);stroke-width:0.5\" />";
 		writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
 	}
 }
 
-void writeSVG(vector<node*>& roots, string output, float width, float height, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
+void writeSVG(vector<node*>& roots, const string& output, float width, float height, float nodeRadius, float topHandlerOffset, float bottomHandlerOffset)
 {
 	// <svg width="400" height="400">
 	// <ellipse cx="20" cy="20" rx=".5" ry=".5" stroke="black" fill="none" stroke-width="5" />
 	// </svg>
 
 	ofstream outputFile;
-	outputFile.open ("output.svg");
+	outputFile.open (output);
 	outputFile << "<svg width=\"" << width << "\" height=\"" << height << "\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink= \"http://www.w3.org/1999/xlink\">\n";
 
-	for (auto a : roots)
+	for (node* a : roots)
 	{
 		writeSVGhelper(a, outputFile, nodeRadius, topHandlerOffset, bottomHandlerOffset);
 	}
@@ -265,9 +281,9 @@ int main (int argc, char** argv)
 	else
 	{
 		float margin = 50;
-		float xSep = 40;
-		float ySep = 60;
-		float nodeRadius = 5;
+		float xSep = 80;
+		float ySep = 90;
+		float nodeRadius = 18;
 		float bottomHandlerOffset = 15;
 		float topHandlerOffset = 30;
 
@@ -314,7 +330,7 @@ int main (int argc, char** argv)
 		}
 
 		calculatePositions(roots);
-		for (auto a : roots)
+		for (node* a : roots)
 		{
 			fixPositions(a, xSep, ySep, margin, margin);
 		}

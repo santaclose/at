@@ -17,4 +17,4 @@ Example input:
 ]
 ```
 Example output:
-![alt text](https://raw.githubusercontent.com/santaclose/at/master/output.svg)
+![alt text](https://raw.githubusercontent.com/santaclose/at/master/test/output.svg)
